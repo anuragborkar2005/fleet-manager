@@ -1,5 +1,6 @@
 #include "services/db_service.hpp"
 #include "services/agent_client.hpp"
+#include "services/ssh_service.hpp"
 
 #include <crow.h>
 #include <crow/app.h>
@@ -7,6 +8,7 @@
 #include <crow/http_response.h>
 #include <crow/json.h>
 #include <crow/middlewares/cors.h>
+#include <crow/websocket.h>
 #include <nlohmann/json.hpp>
 
 
@@ -98,8 +100,8 @@ void register_nodes_routes(crow::App<crow::CORSHandler>& app, AgentClient& agent
 
             auto agent_response = agent_client.execute_command(node["ip"], command);
 
-            db.log_command(node_id, command, agent_response.value("exit_code", 0), 
-                          agent_response.value("stdout", ""), 
+            db.log_command(node_id, command, agent_response.value("exit_code", 0),
+                          agent_response.value("stdout", ""),
                           agent_response.value("stderr", ""));
 
             crow::json::wvalue resp;
@@ -120,4 +122,76 @@ void register_nodes_routes(crow::App<crow::CORSHandler>& app, AgentClient& agent
             return res;
     });
 
+    struct SSHSession {
+        SSHService* ssh = nullptr;
+        bool initialized = false;
+    };
+
+    CROW_WEBSOCKET_ROUTE(app, "/ssh")
+        .onopen(
+            [&](crow::websocket::connection &conn) {
+                conn.userdata(new SSHSession());
+            })
+        .onclose([&](crow::websocket::connection &conn,
+                        const std::string &reason, uint16_t code) {
+            auto session = static_cast<SSHSession *>(conn.userdata());
+            if (session) {
+                if (session->ssh) delete session->ssh;
+                delete session;
+                conn.userdata(nullptr);
+            }
+        })
+        .onmessage([&db](crow::websocket::connection &conn,
+                        const std::string &data, bool is_binary) {
+            if (is_binary) return;
+
+            auto session = static_cast<SSHSession*>(conn.userdata());
+            if (!session) return;
+
+            if (!session->initialized) {
+                try {
+                    auto j = nlohmann::json::parse(data);
+                    if (!j.contains("node_id")) {
+                        conn.send_text("Error: Missing node_id in init message");
+                        conn.close("Invalid init");
+                        return;
+                    }
+
+                    std::string node_id = j["node_id"].get<std::string>();
+                    auto node = db.get_node_by_id(node_id);
+                    if (node.empty()) {
+                        conn.send_text("Error: Node not found");
+                        conn.close("Node not found");
+                        return;
+                    }
+
+                    std::string ip = node["ip"].get<std::string>();
+
+                    session->ssh = new SSHService(ip, 22, "vboxuser", "root");
+                    session->initialized = true;
+
+                    auto ssh = session->ssh;
+                    std::thread reader([ssh, &conn]() {
+                        try {
+                            while (ssh->is_connected()) {
+                                std::string output = ssh->read_available();
+                                if (!output.empty()) {
+                                    conn.send_text(output);
+                                }
+                                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                            }
+                        } catch (...) {}
+                    });
+                    reader.detach();
+
+                } catch (const std::exception &e) {
+                    conn.send_text(std::string("Init Error: ") + e.what());
+                    conn.close("Init failed");
+                }
+            } else {
+                if (session->ssh && session->ssh->is_connected()) {
+                    session->ssh->send(data);
+                }
+            }
+        });
 }
