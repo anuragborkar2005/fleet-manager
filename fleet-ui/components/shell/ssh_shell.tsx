@@ -77,24 +77,22 @@ function SSHShell() {
 
     if (!nodeId) {
         return (
-            <div className="flex flex-col items-center justify-center h-150 bg-slate-950 rounded-lg border border-slate-800 text-slate-400 no-scrollbar">
-                <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
-                <p>Please select a node to access the terminal</p>
-            </div>
+            <Card className="flex flex-col items-center justify-center h-[300px] bg-slate-950 border border-slate-800 rounded-lg text-slate-400 shadow-inner">
+                <AlertCircle className="w-12 h-12 mb-4 opacity-30" />
+                <p className="text-sm">
+                    Please select a node to access the terminal
+                </p>
+            </Card>
         );
     }
 
     return (
-        <Card className="bg-slate-950 border-slate-800 overflow-hidden shadow-2xl">
-            <div className="flex items-center gap-2 px-4 py-2 bg-slate-900/50 border-b border-slate-800">
-                <TerminalIcon className="w-4 h-4 text-sky-400" />
-                <span className="text-xs font-mono text-slate-400">
-                    {selectedNode?.hostname || "unknown"}@
-                    {selectedNode?.ip || "0.0.0.0"}
-                </span>
-            </div>
-            <div className="p-2 h-150  no-scrollbar">
-                <div ref={terminalRef} className="w-fit mx-auto no-scrollbar" />
+        <Card className="bg-slate-950 border border-slate-800 overflow-hidden shadow-xl rounded-lg">
+            <div className="p-2">
+                <div
+                    ref={terminalRef}
+                    className="w-full h-[500px] overflow-auto no-scrollbar rounded-b-lg"
+                ></div>
             </div>
         </Card>
     );
