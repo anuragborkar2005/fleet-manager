@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useContext } from "react";
 import { Terminal } from "xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import "xterm/css/xterm.css";
 import { NodeContext } from "@/providers/node-provider";
 import { Card } from "@/components/ui/card";
@@ -19,7 +21,7 @@ function SSHShell() {
 
         const term = new Terminal({
             cursorBlink: true,
-            fontFamily: "'JetBrains Mono', monospace",
+            fontFamily: "'FiraCode Nerd Font', monospace",
             fontSize: 14,
             cols: 120,
             rows: 35,
@@ -30,6 +32,9 @@ function SSHShell() {
             },
         });
 
+        const fitAddon = new FitAddon();
+        term.loadAddon(fitAddon);
+        term.loadAddon(new WebLinksAddon());
         xtermRef.current = term;
         term.open(terminalRef.current);
 
@@ -72,7 +77,7 @@ function SSHShell() {
 
     if (!nodeId) {
         return (
-            <div className="flex flex-col items-center justify-center h-[600px] bg-slate-950 rounded-lg border border-slate-800 text-slate-400">
+            <div className="flex flex-col items-center justify-center h-150 bg-slate-950 rounded-lg border border-slate-800 text-slate-400 no-scrollbar">
                 <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
                 <p>Please select a node to access the terminal</p>
             </div>
@@ -88,8 +93,8 @@ function SSHShell() {
                     {selectedNode?.ip || "0.0.0.0"}
                 </span>
             </div>
-            <div className="p-2 h-[600px] overflow-y-hidden overflow-x-auto">
-                <div ref={terminalRef} className="w-fit mx-auto" />
+            <div className="p-2 h-150  no-scrollbar">
+                <div ref={terminalRef} className="w-fit mx-auto no-scrollbar" />
             </div>
         </Card>
     );

@@ -167,7 +167,7 @@ void register_nodes_routes(crow::App<crow::CORSHandler>& app, AgentClient& agent
 
                     std::string ip = node["ip"].get<std::string>();
 
-                    session->ssh = new SSHService(ip, 22, "vboxuser", "root");
+                    session->ssh = new SSHService(ip , 22, "vboxuser", "root");
                     session->initialized = true;
 
                     auto ssh = session->ssh;
