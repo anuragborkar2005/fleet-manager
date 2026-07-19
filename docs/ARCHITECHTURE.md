@@ -37,4 +37,4 @@ Fleet Manager is designed as a lightweight, high-performance distributed monitor
 
 ## System Architecture
 
-![System Architecture](assets/architecture.jpg)
+![System Architecture](assets/architechture.jpg)
